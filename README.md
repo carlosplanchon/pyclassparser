@@ -2,7 +2,7 @@
 
 `PyClassParser` is a Python library designed to parse Python class definitions and extract class attributes. It uses the `attrs` library for defining class attributes and ensures type safety with `attrs-strict`.
 
-Actually it only supports Pydantic class format.
+Currently it only supports Pydantic class format.
 
 ## Features
 
