@@ -41,6 +41,11 @@ class ClassParser:
         init=False
     )
 
+    class_indentation_level: Optional[int] = attrs.field(
+        validator=type_validator(),
+        init=False
+    )
+
     class_data_dict: dict[str, list[ClassATTR]] = attrs.field(
         validator=type_validator(),
         init=False
@@ -104,7 +109,8 @@ class ClassParser:
             # print(self.actual_line)
             self.output += self.actual_line + "\n"
 
-            self.add_attr(class_name=class_name)
+            if self.actual_line.lstrip(" ").startswith("class") is False:
+                self.add_attr(class_name=class_name)
 
             self.advance()
 
@@ -121,24 +127,33 @@ class ClassParser:
             self.advance()
 
         if self.actual_line_is_class() is True:
-            class_name: str = self.get_class_name()
-            # print(self.actual_line)
-            self.output += "\n\n" + self.actual_line + "\n"
+            if self.class_indentation_level is None:
+                self.class_indentation_level = self.get_indentation_spaces_amt()
+            else:
+                if self.get_indentation_spaces_amt() == self.class_indentation_level:
+                    class_name: str = self.get_class_name()
+                    # print(self.actual_line)
+                    self.output += "\n\n" + self.actual_line + "\n"
 
-            # Add class data.
-            if class_name in self.class_data_dict:
-                raise Exception(f"Class name {class_name} already exists.")
+                    # Add class data.
+                    if class_name in self.class_data_dict:
+                        raise Exception(f"Class name {class_name} already exists.")
 
-            self.class_data_dict[class_name] = []
+                    self.class_data_dict[class_name] = []
 
-            self.get_class_attributes(class_name=class_name)
+                    self.get_class_attributes(class_name=class_name)
+                else:
+                    # print(f"Indentation error: {self.get_indentation_spaces_amt()}")
+                    self.advance()
 
     def start(self):
         self.lines = self.code.split("\n")
         self.class_data_dict: list[list[ClassATTR]] = {}
 
+        self.class_indentation_level: int | None = None
         while True:
             try:
+                # print(self.actual_line)
                 self.get_next_class()
             except StopIteration:
                 break
