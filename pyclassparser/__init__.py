@@ -94,11 +94,12 @@ class ClassParser:
         if attr_type is not None:
             attr_type: str = attr_type.strip(" ")
 
-        class_attr = ClassATTR(
-            attr_value=attr_value,
-            attr_type=attr_type
-        )
-        self.class_data_dict[class_name].append(class_attr)
+        if attrs_value != "":
+            class_attr = ClassATTR(
+                attr_value=attr_value,
+                attr_type=attr_type
+            )
+            self.class_data_dict[class_name].append(class_attr)
 
     def get_class_attributes(self, class_name: str):
         self.advance()
