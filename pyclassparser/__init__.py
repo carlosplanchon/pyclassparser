@@ -94,7 +94,7 @@ class ClassParser:
         if attr_type is not None:
             attr_type: str = attr_type.strip(" ")
 
-        if attrs_value != "":
+        if attr_value != "":
             class_attr = ClassATTR(
                 attr_value=attr_value,
                 attr_type=attr_type
