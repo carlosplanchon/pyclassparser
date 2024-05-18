@@ -121,18 +121,19 @@ class ClassParser:
         return self.actual_line.lstrip(" ").startswith("class ")
 
     def actual_line_is_import(self) -> bool:
-        return self.actual_line.startswith("import ") or\
+        # print(self.actual_line)
+        is_import_line: bool = self.actual_line.startswith("import ") or\
             self.actual_line.startswith("from ")
+        # print(f"Is import line: {is_import_line}")
+        return is_import_line
 
     def get_next_class(self):
         if self.actual_line is None:
             self.advance()
 
-        if self.actual_line_is_import() is True:
-            self.parsed_code += self.actual_line.strip("\n ") + "\n"
-            self.advance()
-
         while self.actual_line_is_class() is False:
+            if self.actual_line_is_import() is True:
+                self.parsed_code += self.actual_line.strip("\n ") + "\n"
             self.advance()
 
         if self.actual_line_is_class() is True:
