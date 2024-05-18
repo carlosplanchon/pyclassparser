@@ -31,7 +31,7 @@ class ClassParser:
         validator=type_validator(),
         default=None
     )
-    output: str = attrs.field(
+    parsed_code: str = attrs.field(
         validator=type_validator(),
         default=""
     )
@@ -108,7 +108,7 @@ class ClassParser:
         # print(f"> ATTRS Indentation: {attrs_indentation}")
         while attrs_indentation == first_attr_indentation:
             # print(self.actual_line)
-            self.output += self.actual_line + "\n"
+            self.parsed_code += self.actual_line + "\n"
 
             if self.actual_line.lstrip(" ").startswith("class") is False:
                 self.add_attr(class_name=class_name)
@@ -120,8 +120,16 @@ class ClassParser:
     def actual_line_is_class(self) -> bool:
         return self.actual_line.lstrip(" ").startswith("class ")
 
+    def actual_line_is_import(self) -> bool:
+        return self.actual_line.startswith("import ") or\
+            self.actual_line.startswith("from ")
+
     def get_next_class(self):
         if self.actual_line is None:
+            self.advance()
+
+        if self.actual_line_is_import() is True:
+            self.parsed_code += self.actual_line.strip("\n ") + "\n"
             self.advance()
 
         while self.actual_line_is_class() is False:
@@ -134,7 +142,7 @@ class ClassParser:
                 if self.get_indentation_spaces_amt() == self.class_indentation_level:
                     class_name: str = self.get_class_name()
                     # print(self.actual_line)
-                    self.output += "\n\n" + self.actual_line + "\n"
+                    self.parsed_code += "\n\n" + self.actual_line + "\n"
 
                     # Add class data.
                     if class_name in self.class_data_dict:
@@ -159,4 +167,4 @@ class ClassParser:
             except StopIteration:
                 break
 
-        self.output = self.output.strip("\n") + "\n"
+        self.parsed_code = self.parsed_code.strip("\n") + "\n"
