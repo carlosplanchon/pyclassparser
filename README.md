@@ -10,12 +10,10 @@ Currently it only supports Pydantic class format.
 - Uses `attrs` for attribute definition and `attrs-strict` for type validation.
 - Handles optional attributes and attributes with default values.
 
-## Installation
-
-To install `PyClassParser`, you need to have Python 3.x installed. You can install the required dependencies using `pip`:
+## Installation with UV:
 
 ```bash
-pip install attrs attrs-strict
+uv add pyclassparser
 ```
 
 ## Usage
@@ -62,10 +60,3 @@ class AnotherClass:
 
 Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas.
 
-## License
-
-This project is licensed under the MIT License.
-
-## Acknowledgements
-
-This library utilizes `attrs` and `attrs-strict` for attribute definition and type validation. Special thanks to the authors and contributors of these libraries.
