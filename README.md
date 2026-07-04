@@ -1,5 +1,11 @@
 # PyClassParser
 
+[![CI](https://github.com/carlosplanchon/pyclassparser/actions/workflows/ci.yml/badge.svg)](https://github.com/carlosplanchon/pyclassparser/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/pyclassparser.svg)](https://pypi.org/project/pyclassparser/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pyclassparser.svg)](https://pypi.org/project/pyclassparser/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/carlosplanchon/pyclassparser)
+
 `PyClassParser` is a Python library designed to parse Python class definitions and extract class attributes. Parsing is backed by the standard-library `ast` module, so it is robust against blank lines, comments, docstrings, methods, nested classes and default values that contain colons. It uses the `attrs` library for defining the result objects and ensures type safety with `attrs-strict`.
 
 ## Features
