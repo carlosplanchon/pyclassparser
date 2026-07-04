@@ -7,6 +7,8 @@
 [![CI](https://github.com/carlosplanchon/pyclassparser/actions/workflows/ci.yml/badge.svg)](https://github.com/carlosplanchon/pyclassparser/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/pyclassparser.svg)](https://pypi.org/project/pyclassparser/)
 [![Python versions](https://img.shields.io/pypi/pyversions/pyclassparser.svg)](https://pypi.org/project/pyclassparser/)
+[![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/carlosplanchon/pyclassparser)
 
