@@ -1,8 +1,8 @@
+# PyClassParser
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/carlosplanchon/pyclassparser/main/assets/banner.jpg" alt="PyClassParser" width="100%">
 </p>
-
-# PyClassParser
 
 [![CI](https://github.com/carlosplanchon/pyclassparser/actions/workflows/ci.yml/badge.svg)](https://github.com/carlosplanchon/pyclassparser/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/pyclassparser.svg)](https://pypi.org/project/pyclassparser/)
