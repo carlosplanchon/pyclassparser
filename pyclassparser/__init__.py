@@ -2,13 +2,13 @@
 
 The parsing is backed by the standard-library :mod:`ast` module, so it is
 robust against blank lines, comments, docstrings, methods, nested classes and
-default values that contain colons -- none of which need any special handling.
+default values that contain colons, none of which need any special handling.
 
 Two results are exposed after construction:
 
-* :attr:`ClassParser.class_data_dict` -- maps every top-level class name to the
+* :attr:`ClassParser.class_data_dict`: maps every top-level class name to the
   list of its attributes (:class:`ClassATTR`).
-* :attr:`ClassParser.parsed_code` -- a clean, always-valid reconstruction of the
+* :attr:`ClassParser.parsed_code`: a clean, always-valid reconstruction of the
   top-level imports and class stubs (also available as ``.output``).
 """
 
@@ -28,6 +28,10 @@ class ClassATTR:
         validator=type_validator()
     )
     attr_type: Optional[str] = attrs.field(
+        validator=type_validator(),
+        default=None
+    )
+    default_value: Optional[str] = attrs.field(
         validator=type_validator(),
         default=None
     )
@@ -89,16 +93,26 @@ class ClassParser:
                     attr_list.append(
                         ClassATTR(
                             attr_value=stmt.target.id,
-                            attr_type=ast.unparse(stmt.annotation)
+                            attr_type=ast.unparse(stmt.annotation),
+                            default_value=(
+                                ast.unparse(stmt.value)
+                                if stmt.value is not None
+                                else None
+                            )
                         )
                     )
                     attr_nodes.append(stmt)
             elif isinstance(stmt, ast.Assign):
                 names: list[str] = self._assign_target_names(stmt)
                 if names:
+                    default_src: str = ast.unparse(stmt.value)
                     for name in names:
                         attr_list.append(
-                            ClassATTR(attr_value=name, attr_type=None)
+                            ClassATTR(
+                                attr_value=name,
+                                attr_type=None,
+                                default_value=default_src
+                            )
                         )
                     attr_nodes.append(stmt)
 
@@ -134,11 +148,16 @@ class ClassParser:
                 # attribute statements (or ``pass`` when there are none).
                 # Letting ``ast.unparse`` render the whole node keeps
                 # decorators, PEP 695 type parameters, bases and keywords
-                # intact and correctly indented -- including multi-line values.
-                node.body = attr_nodes if attr_nodes else [ast.Pass()]
+                # intact and correctly indented, including multi-line values.
+                new_body: list[ast.stmt] = (
+                    attr_nodes if attr_nodes else [ast.Pass()]
+                )
+                node.body = new_body
                 sections.append(ast.unparse(node))
 
         flush_imports()
 
         self.class_data_dict = class_data
-        self.parsed_code = "\n\n".join(sections).strip("\n") + "\n"
+        # A single trailing newline for real content; empty input stays empty.
+        reconstruction: str = "\n\n".join(sections).strip("\n")
+        self.parsed_code = f"{reconstruction}\n" if reconstruction else ""

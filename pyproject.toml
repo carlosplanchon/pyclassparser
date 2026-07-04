@@ -36,6 +36,7 @@ Repository = "https://github.com/carlosplanchon/pyclassparser.git"
 [dependency-groups]
 dev = [
     "pytest>=8",
+    "mypy>=1.11",
 ]
 
 [tool.setuptools]
@@ -46,3 +47,12 @@ pyclassparser = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[[tool.mypy.overrides]]
+# attrs-strict ships no type information.
+module = ["attrs_strict.*"]
+ignore_missing_imports = true

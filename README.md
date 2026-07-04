@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/carlosplanchon/pyclassparser/main/assets/banner.jpg" alt="PyClassParser" width="100%">
+</p>
+
 # PyClassParser
 
 [![CI](https://github.com/carlosplanchon/pyclassparser/actions/workflows/ci.yml/badge.svg)](https://github.com/carlosplanchon/pyclassparser/actions/workflows/ci.yml)
@@ -13,7 +17,7 @@
 - Parses Python class definitions to extract class names and their attributes.
 - Uses the standard-library `ast` module, so the input must be syntactically valid Python (a `SyntaxError` is raised otherwise).
 - Uses `attrs` for the result objects and `attrs-strict` for type validation.
-- Handles optional attributes and attributes with default values.
+- Captures each attribute's name (`attr_value`), annotation (`attr_type`) and default value (`default_value`) when present.
 - Rebuilds a clean, always-valid reconstruction of the imports and class stubs.
 
 ## Installation with UV:
@@ -58,8 +62,9 @@ class MyClass:
 class AnotherClass:
     attr3: float
 
-{'MyClass': [ClassATTR(attr_value='attr1', attr_type='int'), ClassATTR(attr_value='attr2', attr_type='str')], 
- 'AnotherClass': [ClassATTR(attr_value='attr3', attr_type='float')]}
+{'MyClass': [ClassATTR(attr_value='attr1', attr_type='int', default_value=None),
+             ClassATTR(attr_value='attr2', attr_type='str', default_value="'default'")],
+ 'AnotherClass': [ClassATTR(attr_value='attr3', attr_type='float', default_value=None)]}
 ```
 
 > Note: `parser.parsed_code` is an alias of `parser.output`. Because the code is
@@ -69,9 +74,10 @@ class AnotherClass:
 ## What gets parsed
 
 - Only **top-level** classes are reported; nested classes are ignored.
-- An attribute is either an annotated assignment (`attr: type`) — whose
-  `attr_type` is the annotation — or a plain assignment (`attr = value`), whose
-  `attr_type` is `None`.
+- An attribute is either an annotated assignment (`attr: type`), where
+  `attr_type` is the annotation, or a plain assignment (`attr = value`), where
+  `attr_type` is `None`. `default_value` holds the default as it appears in the
+  source, or `None` when there is no default.
 - Docstrings, comments, methods and nested classes are ignored.
 - Class-level decorators and PEP 695 type parameters (`class Box[T]:`) are kept in `parsed_code`.
 - A duplicate top-level class name raises `ValueError`.
@@ -81,6 +87,7 @@ class AnotherClass:
 ```bash
 uv sync
 uv run pytest
+uv run mypy pyclassparser
 ```
 
 ## Contributing

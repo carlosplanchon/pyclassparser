@@ -1,4 +1,4 @@
-# Publish pyclassparser to PyPI using Trusted Publishing (OIDC) -- no API tokens.
+# Publish pyclassparser to PyPI using Trusted Publishing (OIDC), no API tokens.
 #
 # One-time setup on PyPI (https://pypi.org/manage/account/publishing/):
 #   * PyPI Project Name: pyclassparser
@@ -9,14 +9,16 @@
 # For the very first upload, add it as a "pending publisher" so the project can
 # be created automatically on the first publish.
 #
-# Afterwards: bump `version` in pyproject.toml, then publish a GitHub Release
-# whose tag matches that version (e.g. `0.9` or `v0.9`).
+# Afterwards: bump `version` in pyproject.toml, then push a matching `v`-prefixed
+# tag to trigger the release (version `0.9` uses tag `v0.9`):
+#     git tag v0.9 && git push origin v0.9
 
 name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -32,14 +34,14 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           enable-cache: true
 
-      # A PyPI upload can never be replaced, so refuse to build if the release
+      # A PyPI upload can never be replaced, so refuse to build if the pushed
       # tag and the packaged version disagree. Remove this step if your tags do
       # not encode the version.
-      - name: Verify release tag matches project version
-        if: github.event_name == 'release'
+      - name: Verify tag matches project version
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           version="$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")"
           tag="${GITHUB_REF_NAME#v}"

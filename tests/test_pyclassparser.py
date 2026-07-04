@@ -35,7 +35,9 @@ def test_readme_baseline_class_data_dict():
     assert parser.class_data_dict == {
         "MyClass": [
             ClassATTR(attr_value="attr1", attr_type="int"),
-            ClassATTR(attr_value="attr2", attr_type="str"),
+            ClassATTR(
+                attr_value="attr2", attr_type="str", default_value="'default'"
+            ),
         ],
         "AnotherClass": [
             ClassATTR(attr_value="attr3", attr_type="float"),
@@ -103,7 +105,13 @@ def test_regression_colon_in_dict_default():
         """
     )
     assert parser.class_data_dict == {
-        "MyClass": [ClassATTR(attr_value="mapping", attr_type="dict")]
+        "MyClass": [
+            ClassATTR(
+                attr_value="mapping",
+                attr_type="dict",
+                default_value="{'a': 1}",
+            )
+        ]
     }
 
 
@@ -116,7 +124,13 @@ def test_regression_colon_in_string_default():
         """
     )
     assert parser.class_data_dict == {
-        "MyClass": [ClassATTR(attr_value="started", attr_type="str")]
+        "MyClass": [
+            ClassATTR(
+                attr_value="started",
+                attr_type="str",
+                default_value="'12:30'",
+            )
+        ]
     }
 
 
@@ -243,9 +257,13 @@ def test_generic_and_optional_annotations_preserved():
     )
     assert parser.class_data_dict == {
         "MyClass": [
-            ClassATTR(attr_value="a", attr_type="Optional[int]"),
+            ClassATTR(
+                attr_value="a", attr_type="Optional[int]", default_value="None"
+            ),
             ClassATTR(attr_value="b", attr_type="dict[str, int]"),
-            ClassATTR(attr_value="c", attr_type="list[str]"),
+            ClassATTR(
+                attr_value="c", attr_type="list[str]", default_value="[]"
+            ),
         ]
     }
 
@@ -261,7 +279,11 @@ def test_unannotated_assignment_has_none_type():
     assert parser.class_data_dict == {
         "MyClass": [
             ClassATTR(attr_value="x", attr_type="int"),
-            ClassATTR(attr_value="model_config", attr_type=None),
+            ClassATTR(
+                attr_value="model_config",
+                attr_type=None,
+                default_value="{'frozen': True}",
+            ),
         ]
     }
 
@@ -313,7 +335,7 @@ def test_class_decorators_preserved():
     assert parser.class_data_dict == {
         "Point": [
             ClassATTR(attr_value="x", attr_type="int"),
-            ClassATTR(attr_value="y", attr_type="int"),
+            ClassATTR(attr_value="y", attr_type="int", default_value="0"),
         ]
     }
     assert parser.parsed_code == (
@@ -346,9 +368,9 @@ def test_multiline_string_default_stays_valid():
         third"""
         '''
     )
-    assert parser.class_data_dict == {
-        "Doc": [ClassATTR(attr_value="body", attr_type="str")]
-    }
+    (attr,) = parser.class_data_dict["Doc"]
+    assert attr.attr_value == "body"
+    assert attr.attr_type == "str"
     # The multi-line default must not corrupt the indentation of parsed_code.
     ast.parse(parser.parsed_code)
 
@@ -388,7 +410,20 @@ def test_no_trailing_newline():
 def test_empty_input():
     parser = ClassParser(code="")
     assert parser.class_data_dict == {}
-    assert parser.parsed_code == "\n"
+    assert parser.parsed_code == ""
+
+
+def test_input_without_classes_or_imports_is_empty():
+    parser = parse(
+        """
+        VERSION = "1.0"
+
+        def helper():
+            return 1
+        """
+    )
+    assert parser.class_data_dict == {}
+    assert parser.parsed_code == ""
 
 
 def test_duplicate_top_level_class_name_raises():
@@ -417,6 +452,25 @@ def test_classattr_equality_and_defaults():
         attr_value="a", attr_type="int"
     )
     assert ClassATTR(attr_value="a").attr_type is None
+    assert ClassATTR(attr_value="a").default_value is None
+
+
+def test_default_value_is_captured():
+    parser = parse(
+        """
+        class C:
+            a: int
+            b: int = 5
+            c: str = "x"
+            d = [1, 2]
+        """
+    )
+    assert parser.class_data_dict["C"] == [
+        ClassATTR(attr_value="a", attr_type="int", default_value=None),
+        ClassATTR(attr_value="b", attr_type="int", default_value="5"),
+        ClassATTR(attr_value="c", attr_type="str", default_value="'x'"),
+        ClassATTR(attr_value="d", attr_type=None, default_value="[1, 2]"),
+    ]
 
 
 def test_classattr_rejects_non_string_value():
