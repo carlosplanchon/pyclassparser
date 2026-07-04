@@ -6,6 +6,7 @@ string-splitting implementation and is fixed by the AST-based parser.
 """
 
 import ast
+import sys
 import textwrap
 
 import pytest
@@ -347,6 +348,10 @@ def test_class_decorators_preserved():
     )
 
 
+@pytest.mark.skipif(
+    sys.version_info < (3, 12),
+    reason="PEP 695 type parameter syntax (class Box[T]) only parses on 3.12+",
+)
 def test_regression_pep695_generic_class_preserved():
     # A manually rebuilt header used to drop the ``[T]`` type parameters.
     parser = parse(
