@@ -2,13 +2,9 @@
 requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[options]
-package_dir = "pyclassparser"
-packages = ["pyclassparser"]
-
 [project]
 name = "pyclassparser"
-version = "0.7"
+version = "0.8"
 authors = [
     {name = "Carlos A. Planchón", email = "carlosandresplanchonprestes@gmail.com"}
 ]
@@ -37,5 +33,16 @@ dependencies=[
 [project.urls]
 Repository = "https://github.com/carlosplanchon/pyclassparser.git"
 
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
 [tool.setuptools]
 packages = ["pyclassparser"]
+
+[tool.setuptools.package-data]
+pyclassparser = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

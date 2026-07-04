@@ -1,14 +1,30 @@
-#!/usr/bin/env python3
+"""Parse Python class definitions and extract their attributes.
+
+The parsing is backed by the standard-library :mod:`ast` module, so it is
+robust against blank lines, comments, docstrings, methods, nested classes and
+default values that contain colons -- none of which need any special handling.
+
+Two results are exposed after construction:
+
+* :attr:`ClassParser.class_data_dict` -- maps every top-level class name to the
+  list of its attributes (:class:`ClassATTR`).
+* :attr:`ClassParser.parsed_code` -- a clean, always-valid reconstruction of the
+  top-level imports and class stubs (also available as ``.output``).
+"""
+
+import ast
 
 import attrs
 from attrs_strict import type_validator
 
-from typing import Optional, Any
+from typing import Optional
+
+__all__ = ["ClassATTR", "ClassParser"]
 
 
 @attrs.define()
 class ClassATTR:
-    attr_value: Any = attrs.field(
+    attr_value: str = attrs.field(
         validator=type_validator()
     )
     attr_type: Optional[str] = attrs.field(
@@ -23,149 +39,106 @@ class ClassParser:
         validator=type_validator()
     )
 
-    i: Optional[int] = attrs.field(
-        validator=type_validator(),
-        default=None
-    )
-    actual_line: Optional[str] = attrs.field(
-        validator=type_validator(),
-        default=None
-    )
     parsed_code: str = attrs.field(
         validator=type_validator(),
+        init=False,
         default=""
     )
-
-    lines: list[str] = attrs.field(
-        validator=type_validator(),
-        init=False
-    )
-
-    class_indentation_level: Optional[int] = attrs.field(
-        validator=type_validator(),
-        init=False
-    )
-
     class_data_dict: dict[str, list[ClassATTR]] = attrs.field(
         validator=type_validator(),
-        init=False
+        init=False,
+        factory=dict
     )
 
-    def __attrs_post_init__(self):
-        self.start()
+    def __attrs_post_init__(self) -> None:
+        self._parse()
 
-    def advance(self) -> None:
-        if self.i is None:
-            self.i = 0
-        else:
-            self.i += 1
+    @property
+    def output(self) -> str:
+        """Alias for :attr:`parsed_code` (kept for backwards compatibility)."""
+        return self.parsed_code
 
-        if self.i < len(self.lines):
-            self.actual_line = self.lines[self.i]
-        else:
-            raise StopIteration
+    @staticmethod
+    def _assign_target_names(stmt: ast.Assign) -> list[str]:
+        """Return the plain ``Name`` targets of an unannotated assignment."""
+        names: list[str] = []
+        for target in stmt.targets:
+            if isinstance(target, ast.Name):
+                names.append(target.id)
+            elif isinstance(target, (ast.Tuple, ast.List)):
+                names.extend(
+                    elt.id for elt in target.elts if isinstance(elt, ast.Name)
+                )
+        return names
 
-        return None
+    def _extract_attributes(
+        self, node: ast.ClassDef
+    ) -> tuple[list[ast.stmt], list[ClassATTR]]:
+        """Collect the attribute statements of a class body.
 
-    def get_class_name(self) -> str:
-        class_name: str =\
-            self.actual_line.split("class")[1].split("(")[0].strip(": ")
-        return class_name
+        Annotated assignments (``attr: type``) and plain assignments
+        (``attr = value``) are treated as attributes. Docstrings, comments,
+        methods and nested classes are ignored.
+        """
+        attr_nodes: list[ast.stmt] = []
+        attr_list: list[ClassATTR] = []
 
-    def get_indentation_spaces_amt(self) -> int:
-        indentation_spaces_amt: int = len(
-            self.actual_line) - len(self.actual_line.lstrip(" "))
-        return indentation_spaces_amt
+        for stmt in node.body:
+            if isinstance(stmt, ast.AnnAssign):
+                if isinstance(stmt.target, ast.Name):
+                    attr_list.append(
+                        ClassATTR(
+                            attr_value=stmt.target.id,
+                            attr_type=ast.unparse(stmt.annotation)
+                        )
+                    )
+                    attr_nodes.append(stmt)
+            elif isinstance(stmt, ast.Assign):
+                names: list[str] = self._assign_target_names(stmt)
+                if names:
+                    for name in names:
+                        attr_list.append(
+                            ClassATTR(attr_value=name, attr_type=None)
+                        )
+                    attr_nodes.append(stmt)
 
-    def add_attr(self, class_name: str):
-        parts: list[str] = self.actual_line.split(":")
+        return attr_nodes, attr_list
 
-        if len(parts) == 2:
-            attr_value: str = parts[0]
-            attr_type: str = parts[1]
-            attr_type: str = attr_type.split("=")[0]
+    def _parse(self) -> None:
+        tree: ast.Module = ast.parse(self.code)
 
-        if len(parts) == 1:
-            attr_value: str = parts[0]
-            attr_type = None
+        class_data: dict[str, list[ClassATTR]] = {}
+        sections: list[str] = []
+        import_buffer: list[str] = []
 
-        attr_value: str = attr_value.strip(" ")
+        def flush_imports() -> None:
+            if import_buffer:
+                sections.append("\n".join(import_buffer))
+                import_buffer.clear()
 
-        if attr_type is not None:
-            attr_type: str = attr_type.strip(" ")
+        for node in tree.body:
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                import_buffer.append(ast.unparse(node))
+            elif isinstance(node, ast.ClassDef):
+                if node.name in class_data:
+                    raise ValueError(
+                        f"Class name {node.name} already exists."
+                    )
 
-        if attr_value != "":
-            class_attr = ClassATTR(
-                attr_value=attr_value,
-                attr_type=attr_type
-            )
-            self.class_data_dict[class_name].append(class_attr)
+                attr_nodes, attr_list = self._extract_attributes(node)
+                class_data[node.name] = attr_list
 
-    def get_class_attributes(self, class_name: str):
-        self.advance()
-        first_attr_indentation: int = self.get_indentation_spaces_amt()
-        attrs_indentation: int = first_attr_indentation
-        # print(f"> ATTRS Indentation: {attrs_indentation}")
-        while attrs_indentation == first_attr_indentation:
-            # print(self.actual_line)
-            self.parsed_code += self.actual_line + "\n"
+                flush_imports()
 
-            if self.actual_line.lstrip(" ").startswith("class") is False:
-                self.add_attr(class_name=class_name)
+                # Re-emit the class from the AST with its body reduced to the
+                # attribute statements (or ``pass`` when there are none).
+                # Letting ``ast.unparse`` render the whole node keeps
+                # decorators, PEP 695 type parameters, bases and keywords
+                # intact and correctly indented -- including multi-line values.
+                node.body = attr_nodes if attr_nodes else [ast.Pass()]
+                sections.append(ast.unparse(node))
 
-            self.advance()
+        flush_imports()
 
-            attrs_indentation: int = self.get_indentation_spaces_amt()
-
-    def actual_line_is_class(self) -> bool:
-        return self.actual_line.lstrip(" ").startswith("class ")
-
-    def actual_line_is_import(self) -> bool:
-        # print(self.actual_line)
-        is_import_line: bool = self.actual_line.startswith("import ") or\
-            self.actual_line.startswith("from ")
-        # print(f"Is import line: {is_import_line}")
-        return is_import_line
-
-    def get_next_class(self):
-        if self.actual_line is None:
-            self.advance()
-
-        while self.actual_line_is_class() is False:
-            if self.actual_line_is_import() is True:
-                self.parsed_code += self.actual_line.strip("\n ") + "\n"
-            self.advance()
-
-        if self.actual_line_is_class() is True:
-            if self.class_indentation_level is None:
-                self.class_indentation_level = self.get_indentation_spaces_amt()
-            else:
-                if self.get_indentation_spaces_amt() == self.class_indentation_level:
-                    class_name: str = self.get_class_name()
-                    # print(self.actual_line)
-                    self.parsed_code += "\n\n" + self.actual_line + "\n"
-
-                    # Add class data.
-                    if class_name in self.class_data_dict:
-                        raise Exception(f"Class name {class_name} already exists.")
-
-                    self.class_data_dict[class_name] = []
-
-                    self.get_class_attributes(class_name=class_name)
-                else:
-                    # print(f"Indentation error: {self.get_indentation_spaces_amt()}")
-                    self.advance()
-
-    def start(self):
-        self.lines = self.code.split("\n")
-        self.class_data_dict: list[list[ClassATTR]] = {}
-
-        self.class_indentation_level: int | None = None
-        while True:
-            try:
-                # print(self.actual_line)
-                self.get_next_class()
-            except StopIteration:
-                break
-
-        self.parsed_code = self.parsed_code.strip("\n") + "\n"
+        self.class_data_dict = class_data
+        self.parsed_code = "\n\n".join(sections).strip("\n") + "\n"
